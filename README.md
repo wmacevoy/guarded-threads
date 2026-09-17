@@ -221,9 +221,10 @@ per resource. Go's `select` waits on several channels the same way.
   `Resource` holds a mutex, so it can be neither copied nor moved; keep them
   in `std::unique_ptr` if they live in a container. A Python subclass that
   defines `__init__` must call `super().__init__()`.
-- **Python threads don't run Python code in parallel** (the GIL). The library
-  is about coordination, not speed. It has been tested on CPython 3.12 and
-  3.13 with the GIL, not yet on free-threaded builds.
+- **In ordinary CPython, threads don't run Python code in parallel** (the
+  GIL). The library is about coordination, not speed. It also works on the
+  free-threaded build, where they do: CI runs the tests on 3.14t with the GIL
+  off.
 
 ## Building and testing
 
@@ -243,6 +244,13 @@ the single file `python/guarded.py`. Copy either one into your project.
 
 ThreadSanitizer can fail to start inside Docker, which blocks it from turning
 off address randomization. That is a sandbox limit, not a library problem.
+
+[CI](.github/workflows/ci.yml) runs on every push:
+
+- `make test` and `make sanitize` with GCC and Clang on Ubuntu, and Apple
+  Clang on macOS;
+- the Python tests and the factory on CPython 3.8 and 3.14 (Ubuntu), the
+  free-threaded 3.14t (Ubuntu), and 3.14 on macOS and Windows.
 
 ## Prior art
 
