@@ -25,19 +25,39 @@ the condition. If the condition is false, it lets go of everything and sleeps
 until some other thread changes one of the queues, then checks again. When
 the condition holds, the block runs with both queues locked.
 
-What that removes, compared with condition variables:
-
-- the `while (!ready) wait()` loop, and the bug of writing `if` instead;
-- choosing which condition variable to wait on, and which to signal;
-- the forgotten `notify`, and the subtle `notify_one` that wakes the wrong
-  thread;
-- lock ordering, and the deadlocks that come from getting it wrong;
-- unlocked access: every accessor checks that the caller holds the resource,
-  so a forgotten lock throws instead of racing.
-
 It is meant for programs with a modest number of threads that coordinate --
 simulations, pipelines, background workers, test harnesses, and teaching.
 Read [Caveats](#caveats) before using it anywhere busy.
+
+## Pitfalls
+
+Threads earned their "don't use them" reputation. Here is what happens to
+the classic pitfalls when every shared thing is a guarded resource:
+
+| Pitfall | With guarded-threads |
+|---|---|
+| **Forgotten lock** (data race) | The accessor throws every time that code runs -- no luck involved |
+| **Lock-order deadlock** | Can't happen between resources: a guard takes everything it names at once, in one order every thread shares |
+| **Nested locking** | A nested guard that names a resource the outer guard doesn't hold throws |
+| **Waiting while holding** what others need to make progress | `when()` holds nothing while it waits |
+| **Lost wakeup** | Can't happen: a waiting thread signs up on every resource before it lets go of any |
+| **Missing or wrong `notify`** | There is no `notify`: releasing a changed resource wakes the threads waiting on it |
+| **`if` instead of `while`** around a wait, or a spurious wakeup | The loop is inside `when()`, which checks the condition every time it wakes |
+| **Check-then-act** across two locks | The condition and the action run in the same hold |
+| **Retrying after a partial update** | `balk()` after a change (through a `guard()` accessor) throws |
+
+What is still yours to get right:
+
+| Pitfall | Why the library can't help |
+|---|---|
+| **Wrong condition logic** | It runs the condition you wrote. In the factory, checking `done` before `boxes` sends forklifts home with boxes still on the floor, and the program hangs |
+| **Marking changes** | A method that changes a resource must call `guard()`. C++ rejects `guard()` in a const accessor but not `const_guard()` in a non-const one, and Python checks neither. A missed mark wakes no one |
+| **Starvation** | There is no fairness: a thread can keep losing to others |
+| **Slow work while holding** | Everyone who needs that resource waits too |
+| **Slow or blocking conditions** | They run with the resources held |
+| **Other locks** | A plain mutex used inside a guard must be a leaf: never lock anything while holding it |
+| **Side effects before a balk** | Printing, I/O, and anything not marked by `guard()` happen again when the block is retried |
+| **Performance** | Every change wakes every thread waiting on that resource; see [Caveats](#caveats) |
 
 ## Contents
 
