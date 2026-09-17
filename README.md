@@ -1,5 +1,7 @@
 # guarded-threads
 
+[![CI](https://github.com/wmacevoy/guarded-threads/actions/workflows/ci.yml/badge.svg)](https://github.com/wmacevoy/guarded-threads/actions/workflows/ci.yml)
+
 Wait by condition, not by signal. A small library, in C++17 and Python,
 where a thread says *what it needs* and *what it is waiting for*, and never
 touches a condition variable:

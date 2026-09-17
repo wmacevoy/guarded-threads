@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cpp:
+    name: C++ / ${{ matrix.os }} / ${{ matrix.cxx }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, cxx: g++ }
+          - { os: ubuntu-latest, cxx: clang++ }
+          - { os: macos-latest, cxx: clang++ }
+    steps:
+      - uses: actions/checkout@v7
+
+      # ThreadSanitizer needs room for its shadow memory, which heavy address
+      # randomization on newer kernels can take away.
+      - name: Tame address randomization for ThreadSanitizer
+        if: runner.os == 'Linux'
+        run: sudo sysctl vm.mmap_rnd_bits=28
+
+      - name: Build
+        run: make CXX=${{ matrix.cxx }}
+
+      - name: Test (C++ tests, examples, Python tests)
+        run: make CXX=${{ matrix.cxx }} test
+
+      - name: Sanitizers (ThreadSanitizer, then ASan and UBSan)
+        run: make CXX=${{ matrix.cxx }} sanitize
+
+  python:
+    name: Python ${{ matrix.python }} / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-24.04, python: "3.8" }     # the oldest the README promises
+          - { os: ubuntu-latest, python: "3.14" }
+          - { os: ubuntu-latest, python: "3.14t" }  # free-threaded: no GIL
+          - { os: macos-latest, python: "3.14" }
+          - { os: windows-latest, python: "3.14" }
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Show the interpreter
+        run: >-
+          python -c "import sys; print(sys.version);
+          print('GIL enabled:', getattr(sys, '_is_gil_enabled', lambda: True)())"
+
+      - name: Test
+        run: python -m unittest discover -s python -v
+
+      - name: Run the factory
+        run: python python/factory_guarded.py --trips 1
