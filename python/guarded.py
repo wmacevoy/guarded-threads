@@ -1,6 +1,9 @@
 """
 guarded.py -- shared resources you wait on by condition, not by signal.
 
+SPDX-License-Identifier: MIT
+Copyright (c) 2026 Warren MacEvoy -- https://github.com/wmacevoy/guarded-threads
+
     with when(lambda: not q.empty(), q):    # wait, then hold q
         item = q.pop()                       # until the block ends
 

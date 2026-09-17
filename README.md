@@ -258,3 +258,8 @@ off address randomization. That is a sandbox limit, not a library problem.
   `balk()` is its lock-based cousin, without the rollback.
 - **Abseil's `absl::Mutex`**, whose `LockWhen(Condition)` and
   `Await(Condition)` are an alternative to its condition variable.
+
+## License
+
+MIT -- see [LICENSE](LICENSE). Each library file carries the notice, so a
+copied `guarded.hpp` or `guarded.py` keeps it.
